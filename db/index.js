@@ -1,6 +1,7 @@
 const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
+const fs = require('fs');
 
 function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });
@@ -79,4 +80,16 @@ function sortRecords(field, order) {
   return sorted;
 }
 
-module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords};
+function exportData() {
+  const data = this.listRecords();
+  const now = new Date();
+
+  let text = `Exported On: ${now}\nTotal Records: ${data.length}\nFile: export.txt\n\nRecords:\n`;
+  data.forEach(r => {
+    text += `ID: ${r.id}, Name: ${r.name}, Value: ${r.value}, Created: ${r.createdAt}\n`;
+  });
+
+  fs.writeFileSync("export.txt", text);
+}
+
+module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords, exportData};

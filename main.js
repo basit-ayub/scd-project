@@ -15,8 +15,9 @@ function menu() {
 3. Update Record
 4. Delete Record
 5. Search Record
-6. Sort Records      
-7. Exit
+6. Sort Records     
+7. Export Data 
+8. Exit
 =====================
   `);
 
@@ -72,7 +73,7 @@ function menu() {
           menu();
         });
        break;
-       case '6':
+      case '6':
             rl.question("Sort by (name/date): ", field => {
               rl.question("Order (asc/desc): ", order => {
                 const results = db.sortRecords(field, order);
@@ -81,8 +82,13 @@ function menu() {
                 menu();
               });
             });
-            break;
+            break; 
       case '7':
+              db.exportData();
+              console.log("Data exported successfully to export.txt");
+              menu();
+              break;
+      case '8':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;
