@@ -45,4 +45,38 @@ function searchRecords(keyword) {
     r.id.toString() === keyword
   );
 }
-module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords};
+
+function sortRecords(field, order) {
+  const data = this.listRecords();
+  const sorted = [...data];
+
+  const validFields = ["name", "date"];
+  const validOrders = ["asc", "desc"];
+
+  if (!validFields.includes(field)) {
+    console.error(`Invalid sort field: "${field}". Use "name" or "date".\nReturning Unsorted Data.`);
+    return data;
+  }
+  if (!validOrders.includes(order)) {
+    console.warn(`Invalid sort order: "${order}". Defaulting to "asc".`);
+    order = "asc";
+  }
+
+  sorted.sort((a, b) => {
+    if (field === "name") {
+      return order === "asc"
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name);
+    }
+
+    if (field === "date") {
+      return order === "asc"
+        ? new Date(a.createdAt) - new Date(b.createdAt)
+        : new Date(b.createdAt) - new Date(a.createdAt);
+    }
+  });
+
+  return sorted;
+}
+
+module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords};

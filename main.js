@@ -14,8 +14,9 @@ function menu() {
 2. List Records
 3. Update Record
 4. Delete Record
-5. Search Record      
-6. Exit
+5. Search Record
+6. Sort Records      
+7. Exit
 =====================
   `);
 
@@ -71,7 +72,17 @@ function menu() {
           menu();
         });
        break;
-      case '6':
+       case '6':
+            rl.question("Sort by (name/date): ", field => {
+              rl.question("Order (asc/desc): ", order => {
+                const results = db.sortRecords(field, order);
+                console.log("Sorted Records:");
+                results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Created: ${r.createdAt}`));
+                menu();
+              });
+            });
+            break;
+      case '7':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;
