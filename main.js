@@ -1,11 +1,16 @@
 const readline = require('readline');
 const db = require('./db');
 require('./events/logger'); // Initialize event logger
+const connectDB = require('./db/mongo');
+
+
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
+
+connectDB();
 
 function menu() {
   console.log(`
