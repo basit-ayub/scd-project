@@ -2,6 +2,7 @@ const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
 const fs = require('fs');
+const { updateLastModified , getLastModified } = require('../data/meta');
 
 function createBackup() {
   const data = listRecords();
@@ -22,6 +23,7 @@ function addRecord({ name, value }) {
   fileDB.writeDB(data);
   vaultEvents.emit('recordAdded', newRecord);
   createBackup();
+  updateLastModified();
   return newRecord;
 }
 
@@ -37,6 +39,7 @@ function updateRecord(id, newName, newValue) {
   record.value = newValue;
   fileDB.writeDB(data);
   vaultEvents.emit('recordUpdated', record);
+  updateLastModified();
   return record;
 }
 
@@ -48,6 +51,7 @@ function deleteRecord(id) {
   fileDB.writeDB(data);
   vaultEvents.emit('recordDeleted', record);
   createBackup(); 
+  updateLastModified();
   return record;
 }
 function searchRecords(keyword) {
@@ -103,5 +107,24 @@ function exportData() {
 
   fs.writeFileSync("export.txt", text);
 }
+function getStats() {
+  const data = this.listRecords();
+  if (data.length === 0) return "No records.";
 
-module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords, exportData};
+  const total = data.length;
+  const longestName = data.reduce((a, b) => a.name.length > b.name.length ? a : b);
+  const dates = data.map(r => new Date(r.createdAt));
+  const earliest = new Date(Math.min(...dates));
+  const latest = new Date(Math.max(...dates));
+  const lastModified = getLastModified();
+
+  return {
+    total,
+    lastModified,
+    longestName: `${longestName.name} (${longestName.name.length} chars)`,
+    earliest,
+    latest
+  };
+}
+
+module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords, exportData, getStats};
