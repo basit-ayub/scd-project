@@ -14,7 +14,8 @@ function menu() {
 2. List Records
 3. Update Record
 4. Delete Record
-5. Exit
+5. Search Record      
+6. Exit
 =====================
   `);
 
@@ -33,7 +34,7 @@ function menu() {
       case '2':
         const records = db.listRecords();
         if (records.length === 0) console.log('No records found.');
-        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value}`));
+        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`));
         menu();
         break;
 
@@ -58,6 +59,19 @@ function menu() {
         break;
 
       case '5':
+          rl.question('Enter search keyword: ', keyword => {
+          const results = db.searchRecords(keyword);
+          if (results.length === 0) console.log('No matching records found.');
+          else {
+            console.log(`Found ${results.length} matching record(s):`);
+            results.forEach(r => {
+              console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`);
+            });
+          }
+          menu();
+        });
+       break;
+      case '6':
         console.log('👋 Exiting NodeVault...');
         rl.close();
         break;

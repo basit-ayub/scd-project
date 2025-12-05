@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "id": 1764972434034,
+    "name": "Abdul Basit",
+    "value": "100",
+    "createdAt": "2025-12-05"
+  },
+  {
+    "id": 1764972450600,
+    "name": "Noor Alam",
+    "value": "101",
+    "createdAt": "2025-12-05"
+  },
+  {
+    "id": 1764972456094,
+    "name": "Inam",
+    "value": "102",
+    "createdAt": "2025-12-05"
+  }
+]

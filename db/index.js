@@ -5,7 +5,8 @@ const vaultEvents = require('../events');
 function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });
   const data = fileDB.readDB();
-  const newRecord = { id: recordUtils.generateId(), name, value };
+  const createdAt = new Date().toISOString().split('T')[0];
+  const newRecord = { id: recordUtils.generateId(), name, value, createdAt };
   data.push(newRecord);
   fileDB.writeDB(data);
   vaultEvents.emit('recordAdded', newRecord);
@@ -36,5 +37,12 @@ function deleteRecord(id) {
   vaultEvents.emit('recordDeleted', record);
   return record;
 }
-
-module.exports = { addRecord, listRecords, updateRecord, deleteRecord };
+function searchRecords(keyword) {
+  keyword = keyword.toLowerCase();
+  const data = this.listRecords();
+  return data.filter(r =>
+    r.name.toLowerCase().includes(keyword) ||
+    r.id.toString() === keyword
+  );
+}
+module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords};
