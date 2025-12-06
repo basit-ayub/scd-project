@@ -1,11 +1,11 @@
-const fileDB = require('./file');
 const recordUtils = require('./record');
 const vaultEvents = require('../events');
 const fs = require('fs');
 const { updateLastModified , getLastModified } = require('../data/meta');
+const Record = require('./recordModel'); // Mongoose model
 
-function createBackup() {
-  const data = listRecords();
+async function createBackup() {
+  const data = await listRecords();
   if (!fs.existsSync("backups")) fs.mkdirSync("backups");
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -14,57 +14,67 @@ function createBackup() {
   console.log("📝 Backup created successfully!");
 }
 
-function addRecord({ name, value }) {
+async function addRecord({ name, value }) {
   recordUtils.validateRecord({ name, value });
-  const data = fileDB.readDB();
-  const createdAt = new Date().toISOString().split('T')[0];
-  const newRecord = { id: recordUtils.generateId(), name, value, createdAt };
-  data.push(newRecord);
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordAdded', newRecord);
-  createBackup();
+  const createdAt = new Date();
+  const newRecord = {
+    id: recordUtils.generateId(),
+    name,
+    value,
+    createdAt
+  };
+
+  const savedRecord = await Record.create(newRecord);
+  vaultEvents.emit('recordAdded', savedRecord);
+  await createBackup();
   updateLastModified();
-  return newRecord;
+  return savedRecord;
 }
 
-function listRecords() {
-  return fileDB.readDB();
+async function listRecords() {
+  return await Record.find().sort({ createdAt: -1 }).lean();
 }
 
-function updateRecord(id, newName, newValue) {
-  const data = fileDB.readDB();
-  const record = data.find(r => r.id === id);
-  if (!record) return null;
-  record.name = newName;
-  record.value = newValue;
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordUpdated', record);
+async function updateRecord(id, newName, newValue) {
+  const updated = await Record.findOneAndUpdate(
+    { id },
+    { name: newName, value: newValue },
+    { new: true }
+  ).lean();
+
+  if (!updated) return null;
+  vaultEvents.emit('recordUpdated', updated);
   updateLastModified();
-  return record;
+  return updated;
 }
 
-function deleteRecord(id) {
-  let data = fileDB.readDB();
-  const record = data.find(r => r.id === id);
-  if (!record) return null;
-  data = data.filter(r => r.id !== id);
-  fileDB.writeDB(data);
-  vaultEvents.emit('recordDeleted', record);
-  createBackup(); 
+async function deleteRecord(id) {
+  const deleted = await Record.findOneAndDelete({ id }).lean();
+  if (!deleted) return null;
+  vaultEvents.emit('recordDeleted', deleted);
+  await createBackup();
   updateLastModified();
-  return record;
-}
-function searchRecords(keyword) {
-  keyword = keyword.toLowerCase();
-  const data = this.listRecords();
-  return data.filter(r =>
-    r.name.toLowerCase().includes(keyword) ||
-    r.id.toString() === keyword
-  );
+  return deleted;
 }
 
-function sortRecords(field, order) {
-  const data = this.listRecords();
+async function searchRecords(keyword) {
+  keyword = keyword.trim(); // remove extra spaces
+  const conditions = [
+    { name: { $regex: keyword, $options: 'i' } }
+  ];
+
+  if (!isNaN(Number(keyword))) {
+    conditions.push({ id: keyword }); 
+  }
+
+  const results = await Record.find({ $or: conditions }).lean();
+
+  return results;
+}
+
+
+async function sortRecords(field, order) {
+  const data = await listRecords();
   const sorted = [...data];
 
   const validFields = ["name", "date"];
@@ -96,8 +106,8 @@ function sortRecords(field, order) {
   return sorted;
 }
 
-function exportData() {
-  const data = this.listRecords();
+async function exportData() {
+  const data = await listRecords();
   const now = new Date();
 
   let text = `Exported On: ${now}\nTotal Records: ${data.length}\nFile: export.txt\n\nRecords:\n`;
@@ -107,8 +117,9 @@ function exportData() {
 
   fs.writeFileSync("export.txt", text);
 }
-function getStats() {
-  const data = this.listRecords();
+
+async function getStats() {
+  const data = await listRecords();
   if (data.length === 0) return "No records.";
 
   const total = data.length;
@@ -127,4 +138,4 @@ function getStats() {
   };
 }
 
-module.exports = { addRecord, listRecords, updateRecord, deleteRecord , searchRecords, sortRecords, exportData, getStats};
+module.exports = { addRecord, listRecords, updateRecord, deleteRecord, searchRecords, sortRecords, exportData, getStats };

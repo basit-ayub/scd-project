@@ -3,16 +3,19 @@ const db = require('./db');
 require('./events/logger'); // Initialize event logger
 const connectDB = require('./db/mongo');
 
-
-
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-connectDB();
+// Connect to MongoDB
 
-function menu() {
+
+function askQuestion(question) {
+  return new Promise(resolve => rl.question(question, resolve));
+}
+
+async function menu() {
   console.log(`
 ===== NodeVault =====
 1. Add Record
@@ -27,96 +30,96 @@ function menu() {
 =====================
   `);
 
-  rl.question('Choose option: ', ans => {
-    switch (ans.trim()) {
-      case '1':
-        rl.question('Enter name: ', name => {
-          rl.question('Enter value: ', value => {
-            db.addRecord({ name, value });
-            console.log('✅ Record added successfully!');
-            menu();
-          });
-        });
-        break;
+  const ans = await askQuestion('Choose option: ');
 
-      case '2':
-        const records = db.listRecords();
-        if (records.length === 0) console.log('No records found.');
-        else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`));
-        menu();
-        break;
-
-      case '3':
-        rl.question('Enter record ID to update: ', id => {
-          rl.question('New name: ', name => {
-            rl.question('New value: ', value => {
-              const updated = db.updateRecord(Number(id), name, value);
-              console.log(updated ? '✅ Record updated!' : '❌ Record not found.');
-              menu();
-            });
-          });
-        });
-        break;
-
-      case '4':
-        rl.question('Enter record ID to delete: ', id => {
-          const deleted = db.deleteRecord(Number(id));
-          console.log(deleted ? '🗑️ Record deleted!' : '❌ Record not found.');
-          menu();
-        });
-        break;
-
-      case '5':
-          rl.question('Enter search keyword: ', keyword => {
-          const results = db.searchRecords(keyword);
-          if (results.length === 0) console.log('No matching records found.');
-          else {
-            console.log(`Found ${results.length} matching record(s):`);
-            results.forEach(r => {
-              console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`);
-            });
-          }
-          menu();
-        });
-       break;
-      case '6':
-            rl.question("Sort by (name/date): ", field => {
-              rl.question("Order (asc/desc): ", order => {
-                const results = db.sortRecords(field, order);
-                console.log("Sorted Records:");
-                results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Created: ${r.createdAt}`));
-                menu();
-              });
-            });
-            break; 
-      case '7':
-              db.exportData();
-              console.log("Data exported successfully to export.txt");
-              menu();
-              break;
-      case '8':
-              const stats = db.getStats();
-               console.log(`
-                Vault Statistics:
-                --------------------------
-                Total Records: ${stats.total}
-                Last Modified: ${stats.lastModified}
-                Longest Name: ${stats.longestName} (${stats.longestLength} characters)
-                Earliest Record: ${stats.earliest}
-                Latest Record: ${stats.latest}
-                 `);
-              menu();
-              break;
-      case '9':
-        console.log('👋 Exiting NodeVault...');
-        rl.close();
-        break;
-
-      default:
-        console.log('Invalid option.');
-        menu();
+  switch (ans.trim()) {
+    case '1': {
+      const name = await askQuestion('Enter name: ');
+      const value = await askQuestion('Enter value: ');
+      const record = await db.addRecord({ name, value });
+      console.log('✅ Record added successfully!');
+      break;
     }
-  });
+
+    case '2': {
+      const records = await db.listRecords();
+      if (records.length === 0) console.log('No records found.');
+      else records.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`));
+      break;
+    }
+
+    case '3': {
+      const id = await askQuestion('Enter record ID to update: ');
+      const name = await askQuestion('New name: ');
+      const value = await askQuestion('New value: ');
+      const updated = await db.updateRecord(Number(id), name, value);
+      console.log(updated ? '✅ Record updated!' : '❌ Record not found.');
+      break;
+    }
+
+    case '4': {
+      const id = await askQuestion('Enter record ID to delete: ');
+      const deleted = await db.deleteRecord(Number(id));
+      console.log(deleted ? '🗑️ Record deleted!' : '❌ Record not found.');
+      break;
+    }
+
+    case '5': {
+      const keyword = await askQuestion('Enter search keyword: ');
+      const results = await db.searchRecords(keyword);
+      if (results.length === 0) console.log('No matching records found.');
+      else {
+        console.log(`Found ${results.length} matching record(s):`);
+        results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Value: ${r.value} | Created: ${r.createdAt}`));
+      }
+      break;
+    }
+
+    case '6': {
+      const field = await askQuestion("Sort by (name/date): ");
+      const order = await askQuestion("Order (asc/desc): ");
+      const results = await db.sortRecords(field, order);
+      console.log("Sorted Records:");
+      results.forEach(r => console.log(`ID: ${r.id} | Name: ${r.name} | Created: ${r.createdAt}`));
+      break;
+    }
+
+    case '7': {
+      await db.exportData();
+      console.log("Data exported successfully to export.txt");
+      break;
+    }
+
+    case '8': {
+      const stats = await db.getStats();
+      console.log(`
+Vault Statistics:
+--------------------------
+Total Records: ${stats.total}
+Last Modified: ${stats.lastModified}
+Longest Name: ${stats.longestName}
+Earliest Record: ${stats.earliest}
+Latest Record: ${stats.latest}
+      `);
+      break;
+    }
+
+    case '9':
+      console.log('👋 Exiting NodeVault...');
+      rl.close();
+      process.exit(0);
+      break;
+
+    default:
+      console.log('Invalid option.');
+  }
+
+  menu(); // loop menu
 }
 
-menu();
+async function startCLI() {
+  await connectDB();
+  menu(); 
+}
+
+startCLI();
